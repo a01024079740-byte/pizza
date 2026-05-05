@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>미식가용 종합 음식 추천 시스템</title>
+    <style>
+        :root { --primary: #d35400; --secondary: #27ae60; --bg: #fdfdfd; --dark: #2c3e50; --yt-red: #ff0000; --review-purple: #8e44ad; }
+        body { font-family: 'Pretendard', sans-serif; background-color: var(--bg); padding: 20px; display: flex; justify-content: center; color: #333; }
+        .container { background: white; max-width: 650px; width: 100%; padding: 30px; border-radius: 25px; box-shadow: 0 15px 40px rgba(0,0,0,0.12); }
+        h1 { text-align: center; color: var(--primary); margin-bottom: 25px; font-size: 1.8em; letter-spacing: -1px; }
+        
+        .section-title { font-weight: bold; margin: 20px 0 10px; display: flex; align-items: center; font-size: 1.05em; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        
+        .taste-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 20px; }
+        .taste-item { border: 1px solid #ddd; padding: 10px 5px; border-radius: 10px; background: #fff; cursor: pointer; font-size: 13px; text-align: center; transition: 0.2s; border-bottom: 3px solid #eee; }
+        .taste-item.active { background: var(--dark); color: white; border-color: var(--dark); transform: translateY(2px); border-bottom-width: 1px; }
+
+        .ingredient-group { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 15px; padding: 12px; background: #f8f9fa; border-radius: 12px; max-height: 160px; overflow-y: auto; border: 1px solid #eee; }
+        .tag { background: #fff; border: 1px solid #ddd; padding: 4px 12px; border-radius: 20px; cursor: pointer; font-size: 13px; transition: 0.2s; }
+        .tag.active { background: var(--secondary); color: white; border-color: var(--secondary); }
+        
+        select { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #ddd; margin-bottom: 12px; font-size: 15px; outline: none; appearance: none; background: #fff; }
+
+        .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+        button { padding: 18px; border: none; border-radius: 15px; font-size: 1.1em; font-weight: bold; cursor: pointer; transition: 0.3s; color: white; }
+        
+        #recommend-btn { background: var(--primary); }
+        #recommend-btn:hover { background: #e67e22; }
+        
+        #delivery-btn { background: var(--review-purple); }
+        #delivery-btn:hover { background: #732d91; }
+
+        #result-area { margin-top: 30px; text-align: center; padding: 30px; border-radius: 20px; display: none; background: #fff9f0; border: 2px solid var(--primary); animation: slideUp 0.4s ease-out; }
+        .result-name { font-size: 32px; font-weight: bold; color: var(--primary); margin: 10px 0; }
+        
+        .action-buttons { display: flex; flex-direction: column; gap: 10px; align-items: center; margin-top: 20px; }
+        .link-btn { display: inline-flex; align-items: center; justify-content: center; width: 85%; text-decoration: none; padding: 14px; border-radius: 30px; font-weight: bold; transition: 0.3s; color: white; font-size: 15px; }
+        .yt-recipe { background: var(--yt-red); }
+        .yt-review { background: var(--review-purple); }
+
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>👨‍🍳 미식 초이스: 요리 vs 리뷰</h1>
+
+    <div class="section-title">📍 선호하는 맛</div>
+    <div class="taste-grid" id="taste-grid">
+        <div class="taste-item" onclick="toggleTaste(this, '단맛')">단맛 🍭</div>
+        <div class="taste-item" onclick="toggleTaste(this, '짠맛')">짠맛 🧂</div>
+        <div class="taste-item" onclick="toggleTaste(this, '매운맛')">매운맛 🌶️</div>
+        <div class="taste-item" onclick="toggleTaste(this, '쓴맛')">쓴맛 ☕</div>
+        <div class="taste-item" onclick="toggleTaste(this, '매콤한맛')">매콤한맛 🔥</div>
+        <div class="taste-item" onclick="toggleTaste(this, '얼큰한맛')">얼큰한맛 🥘</div>
+        <div class="taste-item" onclick="toggleTaste(this, '신맛')">신맛 🍋</div>
+        <div class="taste-item" onclick="toggleTaste(this, '감칠맛')">감칠맛 🍄</div>
+    </div>
+
+    <div class="section-title">📍 재료 필터</div>
+    <div class="ingredient-group" id="veggie-group"></div>
+
+    <select id="meat-select"><option value="">고기류 선택</option><option value="닭고기">닭고기</option><option value="소고기">소고기</option><option value="돼지고기">돼지고기</option></select>
+    <select id="seafood-select"><option value="">해산물 선택</option><option value="갑각류">갑각류</option><option value="어류">어류</option><option value="어패류">어패류</option></select>
+
+    <div class="btn-group">
+        <button id="recommend-btn" onclick="processSelection('cook')">레시피 추천받기</button>
+        <button id="delivery-btn" onclick="processSelection('delivery')">배달/리뷰 확인</button>
+    </div>
+
+    <div id="result-area">
+        <div id="result-type" style="color: #888; font-weight: bold; font-size: 14px;"></div>
+        <div class="result-name" id="food-name"></div>
+        <div id="match-reason" style="font-size: 14px; color: #666; margin-bottom: 15px;"></div>
+        
+        <div class="action-buttons">
+            <a id="yt-recipe-link" href="#" target="_blank" class="link-btn yt-recipe">📺 레시피 영상(만들기)</a>
+            <a id="yt-review-link" href="#" target="_blank" class="link-btn yt-review">🔍 생생 리뷰 영상(먹방/후기)</a>
+        </div>
+    </div>
+</div>
+
+<script>
+    const vegetables = ["양파", "마늘", "대파", "감자", "양배추", "버섯", "청양고추", "콩나물", "숙주", "깻잎"];
+
+    const menuDB = [
+        { name: "닭볶음탕", taste: "매콤한맛", ingredients: ["닭고기"], type: "both" },
+        { name: "마라탕", taste: "매운맛", ingredients: ["돼지고기", "숙주"], type: "delivery" },
+        { name: "뿌링클 치킨", taste: "단맛", ingredients: ["닭고기"], type: "delivery" },
+        { name: "제육볶음", taste: "매콤한맛", ingredients: ["돼지고기"], type: "cook" },
+        { name: "짜장면", taste: "단맛", ingredients: ["돼지고기"], type: "delivery" },
+        { name: "육회", taste: "감칠맛", ingredients: ["소고기"], type: "delivery" },
+        { name: "전복구이", taste: "감칠맛", ingredients: ["어패류"], type: "cook" },
+        { name: "얼큰 칼국수", taste: "얼큰한맛", ingredients: ["감자"], type: "cook" },
+        { name: "로제 떡볶이", taste: "매콤한맛", ingredients: ["우유"], type: "delivery" },
+        { name: "삼겹살 구이", taste: "짠맛", ingredients: ["돼지고기"], type: "both" }
+    ];
+
+    let selectedTastes = [];
+
+    const veggieGroup = document.getElementById('veggie-group');
+    vegetables.forEach(v => {
+        const span = document.createElement('span');
+        span.className = 'tag';
+        span.innerText = v;
+        span.onclick = () => span.classList.toggle('active');
+        veggieGroup.appendChild(span);
+    });
+
+    function toggleTaste(el, taste) {
+        el.classList.toggle('active');
+        if (selectedTastes.includes(taste)) {
+            selectedTastes = selectedTastes.filter(t => t !== taste);
+        } else {
+            selectedTastes.push(taste);
+        }
+    }
+
+    function processSelection(mode) {
+        const meat = document.getElementById('meat-select').value;
+        const seafood = document.getElementById('seafood-select').value;
+        const activeVeggies = Array.from(document.querySelectorAll('.tag.active')).map(el => el.innerText);
+        const allIngredients = [meat, seafood, ...activeVeggies].filter(v => v !== "");
+
+        let matches = menuDB.filter(menu => {
+            const tasteMatch = selectedTastes.length === 0 || selectedTastes.includes(menu.taste);
+            const ingMatch = allIngredients.length === 0 || menu.ingredients.some(i => allIngredients.includes(i));
+            return tasteMatch && ingMatch;
+        });
+
+        const resultArea = document.getElementById('result-area');
+        const foodName = document.getElementById('food-name');
+        const matchReason = document.getElementById('match-reason');
+        const typeDisplay = document.getElementById('result-type');
+        const recipeBtn = document.getElementById('yt-recipe-link');
+        const reviewBtn = document.getElementById('yt-review-link');
+
+        const final = matches.length > 0 ? matches[Math.floor(Math.random() * matches.length)] : menuDB[Math.floor(Math.random() * menuDB.length)];
+        
+        foodName.innerText = final.name;
+        matchReason.innerText = `[${final.taste}] 선호도를 반영한 결과입니다.`;
+
+        if (mode === 'cook') {
+            typeDisplay.innerText = "🍳 정성 가득 집밥 메뉴";
+            recipeBtn.style.display = "inline-flex";
+            reviewBtn.style.display = "none";
+            recipeBtn.href = `https://www.youtube.com/results?search_query=${encodeURIComponent(final.name + " 황금레시피")}`;
+            resultArea.style.borderColor = "var(--primary)";
+        } else {
+            typeDisplay.innerText = "🥡 실패 없는 배달/인기 메뉴";
+            recipeBtn.style.display = "none";
+            reviewBtn.style.display = "inline-flex";
+            reviewBtn.href = `https://www.youtube.com/results?search_query=${encodeURIComponent(final.name + " 리뷰 먹방")}`;
+            resultArea.style.borderColor = "var(--review-purple)";
+        }
+
+        resultArea.style.display = 'block';
+        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+    }
+</script>
+
+</body>
+</html>
